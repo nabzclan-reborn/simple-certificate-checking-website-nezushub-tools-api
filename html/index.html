@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>iOS Certificate Checker - NezusHub</title>
+  <link rel="icon" href="https://cdn.nabzclan.vip/nezushub/logo/newlogo.jpg" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Inter",sans-serif;background:#f8fafc;color:#1e293b;line-height:1.6}
+    header{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;text-align:center;padding:2.5rem 1.5rem;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+    header h1{font-size:2rem;font-weight:600}
+    header p{opacity:.9;margin-top:.5rem;font-size:1rem}
+    .container{max-width:760px;margin:2.5rem auto;background:#fff;padding:2rem;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.06)}
+    h2{font-size:1.5rem;font-weight:600;margin-bottom:1.5rem;color:#0f172a}
+    .file-input{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;margin-bottom:1.5rem;padding:2rem;border:2px dashed #cbd5e1;border-radius:14px;background:#f1f5f9;cursor:pointer;transition:all .25s ease;position:relative}
+    .file-input:hover{border-color:#3b82f6;background:#eef5ff}
+    .file-input-icon{font-size:2rem;color:#64748b}
+    input[type=file]{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
+    input[type=text]{width:100%;padding:.75rem 1rem;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;margin-top:10px}
+    button{width:100%;background:#1d4ed8;color:#fff;border:none;padding:.875rem;font-size:1rem;font-weight:500;border-radius:10px;cursor:pointer;transition:background .2s ease}
+    button:hover{background:#1e40af}
+    button:disabled{background:#94a3b8;cursor:not-allowed}
+    .loading-container{margin:1.5rem 0;display:none}
+    .loading-text{text-align:center;font-weight:500;color:#3b82f6;margin-bottom:.75rem}
+    .loading-bar{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden}
+    .loading-progress{height:100%;width:0%;background:linear-gradient(to right,#3b82f6,#1d4ed8);border-radius:3px;animation:loading 1.8s ease-in-out infinite}
+    @keyframes loading{0%{width:0%}50%{width:70%}100%{width:0%}}
+    .result-container{margin-top:2rem;display:none}
+    .card{background:#f9fafb;border:1px solid #e2e8f0;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
+    .card h3{margin-bottom:.5rem;color:#0f172a;font-size:1.1rem}
+    .card p{margin:.25rem 0;font-size:.95rem}
+    .hash-box{background:#e2e8f0;font-family:monospace;font-size:.85rem;padding:.5rem .75rem;border-radius:6px;overflow-x:auto;white-space:nowrap}
+    .status-badge{display:inline-block;padding:.25rem .75rem;border-radius:8px;font-weight:500;font-size:.85rem;margin-top:.5rem}
+    .status-ok{background:#dcfce7;color:#166534}
+    .status-warn{background:#fef9c3;color:#92400e}
+    .status-err{background:#fee2e2;color:#991b1b}
+    .no-js{background:#fee2e2;color:#991b1b;text-align:center;padding:1rem;border-radius:8px;margin:1rem auto;max-width:760px;font-weight:500}
+    footer{text-align:center;padding:1.5rem;color:#64748b;font-size:.875rem}
+    footer a{color:#3b82f6;text-decoration:none}
+    footer a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <noscript>
+    <div class="no-js">
+      ⚠️ JavaScript is disabled. Please enable it in your browser to use the iOS Certificate Checker.
+    </div>
+  </noscript>
+
+  <header>
+    <h1>iOS Certificate Checker</h1>
+    <p>Upload your .p12 or .mobileprovision file to analyze instantly</p>
+  </header>
+
+  <div class="container">
+    <h2>Upload Certificate</h2>
+    <label class="file-input" id="dropZone">
+      <div class="file-input-icon">📁</div>
+      <input type="file" id="fileInput" accept=".p12,.mobileprovision" />
+      <p id="fileLabel">Click or drop your iOS certificate here</p>
+    </label>
+
+    <input type="text" id="passwordInput" placeholder="Password (if .p12 is protected)" />
+
+    <button id="analyzeBtn">Analyze Certificate</button>
+
+    <div id="loadingContainer" class="loading-container">
+      <div class="loading-text">Analyzing certificate…</div>
+      <div class="loading-bar"><div class="loading-progress"></div></div>
+    </div>
+
+    <div id="result" class="result-container"></div>
+  </div>
+
+  <footer>
+    &copy; 2027 NezusHub X NabzClan— Powered by <a href="https://tools.nezushub.vip/cert-ios-checker/api-docs/" target="_blank">NezusHub tools: certificate ios checker API</a>
+  </footer>
+
+  <script>
+    if(!window.FileReader){
+      document.body.innerHTML='<div class="no-js">⚠️ Your browser does not support JavaScript file uploads. Please enable JavaScript or update your browser.</div>';
+    }
+
+    const fileInput=document.getElementById("fileInput");
+    const fileLabel=document.getElementById("fileLabel");
+    const passwordInput=document.getElementById("passwordInput");
+    const analyzeBtn=document.getElementById("analyzeBtn");
+    const loadingContainer=document.getElementById("loadingContainer");
+    const resultContainer=document.getElementById("result");
+
+    fileInput.addEventListener("change",()=>{if(fileInput.files.length>0)fileLabel.textContent=fileInput.files[0].name});
+
+    analyzeBtn.addEventListener("click",async()=>{
+      if(fileInput.files.length===0)return alert("Please select a file first.");
+      const file=fileInput.files[0];
+      const password=passwordInput.value.trim();
+      const formData=new FormData();
+      formData.append("file",file);
+      if(password)formData.append("password",password);
+      loadingContainer.style.display="block";
+      resultContainer.innerHTML="";
+      resultContainer.style.display="none";
+      analyzeBtn.disabled=true;
+      try{
+        const res=await fetch("https://tools.nezushub.vip/cert-ios-checker/api/",{method:"POST",body:formData});
+        const data=await res.json();
+        renderResults(data);
+      }catch(err){
+        alert("Error: "+err.message);
+      }finally{
+        loadingContainer.style.display="none";
+        analyzeBtn.disabled=false;
+      }
+    });
+
+    function renderResults(data){
+      resultContainer.style.display="block";
+      resultContainer.innerHTML="";
+      if(!data.success){
+        const err=data.error||{};
+        resultContainer.innerHTML=`
+          <div class="card" style="border-left:4px solid #dc2626;">
+            <h3>❌ Error</h3>
+            <p><strong>Message:</strong> ${err.message||"Unknown error"}</p>
+            <p><strong>Details:</strong> ${err.details?.raw_output||"N/A"}</p>
+            <p><strong>Code:</strong> ${err.code||"500"}</p>
+          </div>`;
+        return;
+      }
+      const cert=data.data.certificate;
+      const info=cert.certificate_info||{};
+      const status=cert.certificate_status||{};
+      const fake=cert.fake_detection||{};
+      const warn=cert.fake_alert||{};
+      const entitlements=cert.entitlements||"—";
+      const file=data.data.files?.primary||{};
+      const lowerStatus=(status.status||"").toLowerCase();
+      let statusColor="status-ok";
+      if(lowerStatus==="revoked")statusColor="status-err";
+      else if(lowerStatus==="expired")statusColor="status-warn";
+      else if(fake.is_fake)statusColor="status-warn";
+      const fakeMsg=fake.is_fake?`<div class="card" style="border-left:4px solid #eab308;"><h3>⚠️ Fake Certificate Detected</h3><p>${warn.message||"This certificate failed authenticity checks."}</p></div>`:"";
+      const fingerprints=info.fingerprints||{};
+      resultContainer.innerHTML+=`
+        <div class="card"><h3>📄 File Info</h3>
+          <p><strong>Name:</strong> ${file.name}</p>
+          <p><strong>Type:</strong> ${file.type}</p>
+          <div><strong>Hash:</strong><div class="hash-box">${file.hash}</div></div>
+        </div>
+        <div class="card"><h3>👤 Subject</h3>
+          ${Object.entries(info.subject||{}).map(([k,v])=>`<p><strong>${k}:</strong> ${v}</p>`).join("")}
+        </div>
+        <div class="card"><h3>🏢 Issuer</h3>
+          ${Object.entries(info.issuer||{}).map(([k,v])=>`<p><strong>${k}:</strong> ${v}</p>`).join("")}
+        </div>
+        <div class="card"><h3>📆 Validity</h3>
+          <p><strong>From:</strong> ${info.validity_period?.valid_from||"—"}</p>
+          <p><strong>To:</strong> ${info.validity_period?.valid_to||"—"}</p>
+          <p><strong>Algorithm:</strong> ${info.signature_algorithm||"—"}</p>
+        </div>
+        <div class="card"><h3>🔑 Fingerprints</h3>
+          ${Object.entries(fingerprints).map(([k,v])=>`<p><strong>${k}:</strong><div class="hash-box">${v}</div></p>`).join("")}
+        </div>
+        <div class="card"><h3>🔒 Status</h3>
+          <p><strong>Status:</strong> ${status.status}</p>
+          ${status.reason?`<p><strong>Reason:</strong> ${status.reason}</p>`:""}
+          ${status.revocation_time?`<p><strong>Revoked:</strong> ${status.revocation_time}</p>`:""}
+          <span class="status-badge ${statusColor}">${status.status}</span>
+        </div>
+        ${fakeMsg}
+        <div class="card"><h3>🧠 Entitlements</h3>
+          ${typeof entitlements==="string"
+            ?`<p>${entitlements}</p>`
+            :Object.entries(entitlements).map(([k,v])=>`<p><strong>${k}:</strong> ${v.status||v}</p>`).join("")}
+        </div>
+        <div class="card"><h3>🔗 Links</h3>
+          <p><a href="${data.data.result_url}" target="_blank">View Full Report</a></p>
+        </div>`;
+    }
+  </script>
+</body>
+</html>
